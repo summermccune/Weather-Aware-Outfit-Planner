@@ -4,6 +4,7 @@ from models.mdp import OutfitMDP
 from models.wardrobe_mdp import WardrobeMDP, sample_week_wardrobe
 from utils import config
 from utils.simulate import simulate_simple_outfit_mdp, simulate_wardrobe_mdp, sample_week_simple
+from utils.visualize import create_all_graphs
 
 
 def run_simple_mdp():
@@ -91,9 +92,51 @@ if __name__ == "__main__":
     RUN_SIMPLE = True
     RUN_WARDROBE = True
 
+    simple_results = {}
+    wardrobe_results = {}
+
     if RUN_SIMPLE:
         run_simple_mdp()
         print("\n" + "=" * 60 + "\n")
+        simple_results = {
+            "mdp": OutfitMDP(
+                weather_states=config.weather_states,
+                outfit_actions=config.outfit_categories,
+                weather_transition_matrix=config.weather_transition_matrix,
+                reward_weights=config.reward_weights_simple,
+                horizon_days=7,
+            ),
+        }
+        V_vi, simple_results["policy_vi"] = value_iteration(simple_results["mdp"])
+        V_pi, simple_results["policy_pi"] = policy_iteration(simple_results["mdp"])
+        simple_results["results_vi"] = simulate_simple_outfit_mdp(simple_results["mdp"], simple_results["policy_vi"], num_weeks=500)
+        simple_results["results_pi"] = simulate_simple_outfit_mdp(simple_results["mdp"], simple_results["policy_pi"], num_weeks=500)
 
     if RUN_WARDROBE:
         run_wardrobe_mdp()
+        wardrobe_results = {
+            "mdp": WardrobeMDP(
+                weather_states=config.weather_states,
+                outfits=config.outfits,
+                weather_transition_matrix=config.weather_transition_matrix,
+                reward_weights=config.reward_weights_wardrobe,
+                horizon_days=7,
+            ),
+        }
+        V_vi, wardrobe_results["policy_vi"] = value_iteration(wardrobe_results["mdp"])
+        V_pi, wardrobe_results["policy_pi"] = policy_iteration(wardrobe_results["mdp"])
+        wardrobe_results["results_vi"] = simulate_wardrobe_mdp(wardrobe_results["mdp"], wardrobe_results["policy_vi"], num_weeks=500)
+        wardrobe_results["results_pi"] = simulate_wardrobe_mdp(wardrobe_results["mdp"], wardrobe_results["policy_pi"], num_weeks=500)
+
+    # Generate visualizations
+    if simple_results and wardrobe_results:
+        create_all_graphs(
+            simple_results["mdp"],
+            simple_results["results_vi"],
+            simple_results["results_pi"],
+            simple_results["policy_vi"],
+            wardrobe_results["mdp"],
+            wardrobe_results["results_vi"],
+            wardrobe_results["results_pi"],
+            wardrobe_results["policy_vi"],
+        )
